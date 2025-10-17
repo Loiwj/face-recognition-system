@@ -46,7 +46,7 @@ def example_3_batch_processing():
     input_dir = "input_images"
     output_dir = "output_images"
     
-    print(f"""
+    print("""
 To process multiple images:
     
     import os
@@ -55,15 +55,15 @@ To process multiple images:
     frs = FaceRecognitionSystem(known_faces_dir="known_faces")
     
     # Create output directory
-    os.makedirs("{output_dir}", exist_ok=True)
+    os.makedirs("output_images", exist_ok=True)
     
     # Process each image
-    for filename in os.listdir("{input_dir}"):
+    for filename in os.listdir("input_images"):
         if filename.endswith(('.jpg', '.jpeg', '.png')):
-            input_path = os.path.join("{input_dir}", filename)
-            output_path = os.path.join("{output_dir}", filename)
+            input_path = os.path.join("input_images", filename)
+            output_path = os.path.join("output_images", filename)
             
-            print(f"Processing {{filename}}...")
+            print(f"Processing {filename}...")
             frs.draw_faces(input_path, output_path, recognize=True)
     """)
 
