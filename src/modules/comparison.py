@@ -177,8 +177,15 @@ class EuclideanDistanceComparator(BaseComparator):
                 best_distance = min_distance
                 best_identity = identity
         
-        # Convert distance to confidence (0-1)
-        confidence = max(0, 1 - (best_distance / self.unknown_threshold))
+        # Convert distance to confidence (0-1) - improved logic
+        # Euclidean distance typically ranges 0-2 for normalized embeddings
+        # Use inverse relationship: smaller distance = higher confidence
+        max_expected_distance = 2.0  # Maximum expected distance for normalized embeddings
+        confidence = max(0, 1 - (best_distance / max_expected_distance))
+        
+        # Apply threshold scaling
+        if confidence < self.threshold:
+            confidence = confidence * 0.5  # Reduce confidence for low matches
         
         # Xác định có phải unknown không
         is_unknown = best_distance > self.unknown_threshold
@@ -232,8 +239,15 @@ class ManhattanDistanceComparator(BaseComparator):
                 best_distance = min_distance
                 best_identity = identity
         
-        # Convert distance to confidence (0-1)
-        confidence = max(0, 1 - (best_distance / self.unknown_threshold))
+        # Convert distance to confidence (0-1) - improved logic
+        # Manhattan distance typically ranges 0-4 for normalized embeddings
+        # Use inverse relationship: smaller distance = higher confidence
+        max_expected_distance = 4.0  # Maximum expected distance for normalized embeddings
+        confidence = max(0, 1 - (best_distance / max_expected_distance))
+        
+        # Apply threshold scaling
+        if confidence < self.threshold:
+            confidence = confidence * 0.5  # Reduce confidence for low matches
         
         # Xác định có phải unknown không
         is_unknown = best_distance > self.unknown_threshold
@@ -311,18 +325,26 @@ class SVMComparator(BaseComparator):
         prediction = self.svm_model.predict(query_scaled)[0]
         probabilities = self.svm_model.predict_proba(query_scaled)[0]
         
-        # Lấy confidence cao nhất
-        max_confidence = np.max(probabilities)
-        predicted_identity = self.label_to_identity.get(prediction, "Unknown")
+        # Lấy confidence cao nhất từ SVM
+        max_confidence = float(np.max(probabilities))
+        predicted_identity = self.label_to_identity.get(int(prediction), "Unknown")
         
-        # Xác định có phải unknown không
-        is_unknown = max_confidence < self.threshold
+        # Boost theo cosine similarity với lớp dự đoán
+        boost_confidence = 0.0
+        if predicted_identity in database_embeddings and len(database_embeddings[predicted_identity]) > 0:
+            class_embeddings = database_embeddings[predicted_identity]
+            sims = [float(np.dot(query_embedding, emb)) for emb in class_embeddings]
+            boost_confidence = max(sims)
+            boost_confidence = max(0.0, min(1.0, boost_confidence))
+        
+        final_confidence = max(max_confidence, boost_confidence)
+        is_unknown = final_confidence < self.threshold
         
         return ComparisonResult(
             identity=predicted_identity if not is_unknown else "Unknown",
-            confidence=max_confidence,
+            confidence=final_confidence,
             method="svm_classifier",
-            is_unknown=is_unknown
+            is_unknown=bool(is_unknown)
         )
     
     def get_name(self) -> str:
@@ -370,8 +392,8 @@ class KNNComparator(BaseComparator):
         # Scale features
         X_scaled = self.scaler.fit_transform(X)
         
-        # Train KNN
-        self.knn_model = KNeighborsClassifier(n_neighbors=self.n_neighbors)
+        # Train KNN (sử dụng trọng số theo khoảng cách để cải thiện confidence)
+        self.knn_model = KNeighborsClassifier(n_neighbors=self.n_neighbors, weights='distance', metric='euclidean')
         self.knn_model.fit(X_scaled, y)
         
         self.logger.info(f"Đã train KNN với {len(self.identity_to_label)} identities")
@@ -390,18 +412,32 @@ class KNNComparator(BaseComparator):
         prediction = self.knn_model.predict(query_scaled)[0]
         probabilities = self.knn_model.predict_proba(query_scaled)[0]
         
-        # Lấy confidence cao nhất
-        max_confidence = np.max(probabilities)
-        predicted_identity = self.label_to_identity.get(prediction, "Unknown")
+        # Lấy confidence cao nhất từ KNN
+        max_confidence = float(np.max(probabilities))
+        predicted_identity = self.label_to_identity.get(int(prediction), "Unknown")
         
-        # Xác định có phải unknown không
-        is_unknown = max_confidence < self.threshold
+        # Boost theo cosine similarity với embeddings của lớp dự đoán
+        # Dùng embedding gốc (đã L2-normalized) để tính cosine
+        boost_confidence = 0.0
+        if predicted_identity in database_embeddings and len(database_embeddings[predicted_identity]) > 0:
+            class_embeddings = database_embeddings[predicted_identity]
+            # cosine similarity: (a·b)/(||a|| ||b||) ; với L2-normalized thì = dot(a, b)
+            sims = [float(np.dot(query_embedding, emb)) for emb in class_embeddings]
+            boost_confidence = max(sims)
+            # bảo vệ biên độ
+            boost_confidence = max(0.0, min(1.0, boost_confidence))
+        
+        # Chọn confidence tốt hơn giữa KNN prob và cosine boost
+        final_confidence = max(max_confidence, boost_confidence)
+        
+        # Xác định có phải unknown không theo final_confidence
+        is_unknown = final_confidence < self.threshold
         
         return ComparisonResult(
             identity=predicted_identity if not is_unknown else "Unknown",
-            confidence=max_confidence,
+            confidence=final_confidence,
             method="knn_classifier",
-            is_unknown=is_unknown
+            is_unknown=bool(is_unknown)
         )
     
     def get_name(self) -> str:

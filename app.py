@@ -9,6 +9,7 @@ import numpy as np
 import base64
 import json
 import logging
+from collections import defaultdict, deque
 from datetime import datetime
 from typing import Dict, List, Optional, Any
 from flask import Flask, render_template, request, jsonify, redirect, url_for, flash
@@ -58,6 +59,10 @@ recognition_settings = {
     "unknown_threshold": 0.85
 }
 
+# Smoothing cho camera: lưu trung bình trượt N khung theo danh tính
+SMOOTHING_WINDOW = 5
+_confidence_history = defaultdict(lambda: deque(maxlen=SMOOTHING_WINDOW))
+
 # Initialize models
 def update_comparator():
     """Cập nhật comparator với settings mới"""
@@ -80,7 +85,7 @@ def initialize_models():
     
     try:
         # Initialize face detector
-        face_detector = FaceDetectorFactory.create_detector('mediapipe')
+        face_detector = FaceDetectorFactory.create_detector('facenet_mtcnn')
         logger.info(f"Initialized face detector: {face_detector.get_name()}")
         
         # Initialize preprocessor
@@ -253,6 +258,11 @@ def process_image_for_recognition(image):
                     # Fallback if bbox is not tuple
                     x, y, width, height = 0, 0, 100, 100
                 
+                # Tính smoothed confidence dựa trên lịch sử
+                identity_key = result.identity if result.identity else "Unknown"
+                _confidence_history[identity_key].append(float(result.confidence))
+                smoothed_confidence = float(sum(_confidence_history[identity_key]) / len(_confidence_history[identity_key]))
+
                 results.append({
                     "face_index": i,
                     "bbox": {
@@ -262,7 +272,8 @@ def process_image_for_recognition(image):
                         "height": int(height)
                     },
                     "confidence": float(faces[i].confidence),
-                    "recognition_result": result.to_dict()
+                    "recognition_result": result.to_dict(),
+                    "smoothed_confidence": smoothed_confidence
                 })
         
         return {
@@ -447,11 +458,11 @@ def api_export_database():
 def api_get_recognition_settings():
     """API lấy settings nhận diện"""
     try:
-        return jsonify({
-            "success": True,
-            "settings": recognition_settings,
-            "available_methods": ["cosine_similarity", "euclidean_distance", "manhattan_distance"]
-        })
+                return jsonify({
+                    "success": True,
+                    "settings": recognition_settings,
+                    "available_methods": ["cosine_similarity", "euclidean_distance", "manhattan_distance", "svm_classifier", "knn_classifier"]
+                })
     except Exception as e:
         logger.error(f"Error getting recognition settings: {e}")
         return jsonify({"success": False, "message": str(e)})
@@ -467,7 +478,7 @@ def api_update_recognition_settings():
         
         # Validate settings
         if 'method' in data:
-            if data['method'] not in ["cosine_similarity", "euclidean_distance", "manhattan_distance"]:
+            if data['method'] not in ["cosine_similarity", "euclidean_distance", "manhattan_distance", "svm_classifier", "knn_classifier"]:
                 return jsonify({"success": False, "message": "Phương pháp không hợp lệ"})
             recognition_settings['method'] = data['method']
         
