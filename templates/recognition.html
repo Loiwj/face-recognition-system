@@ -1,0 +1,683 @@
+{% extends "base.html" %}
+
+{% block title %}Nhận diện Khuôn mặt - Hệ thống Nhận diện Khuôn mặt{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row">
+        <div class="col-12">
+            <h2 class="mb-4">
+                <i class="fas fa-search text-success me-2"></i>
+                Nhận diện Khuôn mặt
+            </h2>
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- Recognition Settings -->
+        <div class="col-md-4 mb-4">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="fas fa-cog me-2"></i>
+                        Cài đặt Nhận diện
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <form id="recognitionSettingsForm">
+                        <!-- Method Selection -->
+                        <div class="mb-3">
+                            <label for="recognitionMethod" class="form-label">Phương pháp:</label>
+                            <select class="form-select" id="recognitionMethod" name="method">
+                                <option value="cosine_similarity">Cosine Similarity</option>
+                                <option value="euclidean_distance">Euclidean Distance</option>
+                                <option value="manhattan_distance">Manhattan Distance</option>
+                            </select>
+                        </div>
+
+                        <!-- Threshold -->
+                        <div class="mb-3">
+                            <label for="threshold" class="form-label">Ngưỡng Tin cậy:</label>
+                            <input type="range" class="form-range" id="threshold" name="threshold" 
+                                   min="0.1" max="1.0" step="0.05" value="0.6">
+                            <div class="d-flex justify-content-between">
+                                <small class="text-muted">0.1</small>
+                                <small class="text-muted">0.6</small>
+                                <small class="text-muted">1.0</small>
+                            </div>
+                            <div class="text-center">
+                                <span id="thresholdValue" class="badge bg-primary">0.6</span>
+                            </div>
+                        </div>
+
+                        <!-- Unknown Threshold -->
+                        <div class="mb-3">
+                            <label for="unknownThreshold" class="form-label">Ngưỡng Người lạ:</label>
+                            <input type="range" class="form-range" id="unknownThreshold" name="unknown_threshold" 
+                                   min="0.1" max="1.0" step="0.05" value="0.85">
+                            <div class="d-flex justify-content-between">
+                                <small class="text-muted">0.1</small>
+                                <small class="text-muted">0.85</small>
+                                <small class="text-muted">1.0</small>
+                            </div>
+                            <div class="text-center">
+                                <span id="unknownThresholdValue" class="badge bg-warning">0.85</span>
+                            </div>
+                        </div>
+
+                        <!-- Update Button -->
+                        <div class="d-grid">
+                            <button type="button" class="btn btn-primary" onclick="updateRecognitionSettings()">
+                                <i class="fas fa-save me-1"></i>Cập nhật
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- Real-time Recognition -->
+        <div class="col-md-8 mb-4">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="fas fa-video me-2"></i>
+                        Nhận diện Thời gian thực
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <!-- Video Container -->
+                    <div class="video-container mb-3" style="position: relative;">
+                        <video id="recognitionVideo" width="100%" height="400" autoplay style="display: none;"></video>
+                        <canvas id="recognitionCanvas" style="display: none; position: absolute; top: 0; left: 0; pointer-events: none;"></canvas>
+                        <div id="videoPlaceholder" class="text-center p-5 border rounded">
+                            <i class="fas fa-video fa-3x text-muted mb-3"></i>
+                            <p class="text-muted">Nhấn "Bắt đầu" để bắt đầu nhận diện</p>
+                        </div>
+                    </div>
+
+                    <!-- Controls -->
+                    <div class="mb-3">
+                        <button class="btn btn-success me-2" onclick="startRecognition()" id="startBtn">
+                            <i class="fas fa-play me-1"></i>Bắt đầu
+                        </button>
+                        <button class="btn btn-warning me-2" onclick="captureFrame()" id="captureBtn" disabled>
+                            <i class="fas fa-camera me-1"></i>Chụp ảnh
+                        </button>
+                        <button class="btn btn-danger" onclick="stopRecognition()" id="stopBtn" disabled>
+                            <i class="fas fa-stop me-1"></i>Dừng
+                        </button>
+                    </div>
+
+                    <!-- Recognition Results -->
+                    <div id="recognitionResults" style="display: none;">
+                        <h6>Kết quả nhận diện:</h6>
+                        <div id="resultsList"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Upload Image Recognition -->
+        <div class="col-md-4 mb-4">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="fas fa-upload me-2"></i>
+                        Upload Ảnh để Nhận diện
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <!-- File Upload -->
+                    <div class="upload-area mb-3" id="uploadArea">
+                        <i class="fas fa-cloud-upload-alt fa-2x text-muted mb-2"></i>
+                        <h6>Kéo thả ảnh vào đây</h6>
+                        <p class="text-muted small">hoặc</p>
+                        <input type="file" id="imageInput" class="d-none" accept="image/*">
+                        <button class="btn btn-primary btn-sm" onclick="$('#imageInput').click()">
+                            <i class="fas fa-folder-open me-1"></i>Chọn ảnh
+                        </button>
+                    </div>
+
+                    <!-- Selected Image Preview -->
+                    <div id="imagePreview" style="display: none;">
+                        <h6>Ảnh đã chọn:</h6>
+                        <img id="previewImg" class="img-fluid rounded mb-2" alt="Preview">
+                        <button class="btn btn-success w-100" onclick="recognizeImage()">
+                            <i class="fas fa-search me-1"></i>Nhận diện
+                        </button>
+                    </div>
+
+                    <!-- Loading -->
+                    <div class="loading text-center">
+                        <div class="spinner-border text-primary" role="status">
+                            <span class="visually-hidden">Đang xử lý...</span>
+                        </div>
+                        <p class="mt-2">Đang nhận diện...</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Recognition Settings -->
+            <div class="card mt-3">
+                <div class="card-header">
+                    <h6 class="mb-0">
+                        <i class="fas fa-cog me-2"></i>
+                        Cài đặt
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <label for="confidenceThreshold" class="form-label">Ngưỡng tin cậy</label>
+                        <input type="range" class="form-range" id="confidenceThreshold" 
+                               min="0.1" max="1.0" step="0.1" value="0.6">
+                        <div class="d-flex justify-content-between">
+                            <small>0.1</small>
+                            <small id="thresholdValue">0.6</small>
+                            <small>1.0</small>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="showUnknown" checked>
+                            <label class="form-check-label" for="showUnknown">
+                                Hiển thị "Unknown"
+                            </label>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="showConfidence" checked>
+                            <label class="form-check-label" for="showConfidence">
+                                Hiển thị độ tin cậy
+                            </label>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Recognition History -->
+    <div class="row mt-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="fas fa-history me-2"></i>
+                        Lịch sử Nhận diện
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div id="recognitionHistory">
+                        <p class="text-muted text-center">Chưa có lịch sử nhận diện</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+let recognitionStream = null;
+let recognitionInterval = null;
+let recognitionHistory = [];
+
+// Load recognition settings on page load
+document.addEventListener('DOMContentLoaded', function() {
+    loadRecognitionSettings();
+    
+    // Update threshold values when sliders change
+    document.getElementById('threshold').addEventListener('input', function() {
+        document.getElementById('thresholdValue').textContent = this.value;
+    });
+    
+    document.getElementById('unknownThreshold').addEventListener('input', function() {
+        document.getElementById('unknownThresholdValue').textContent = this.value;
+    });
+});
+
+// Load current recognition settings
+function loadRecognitionSettings() {
+    fetch('/api/recognition/settings')
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                const settings = data.settings;
+                document.getElementById('recognitionMethod').value = settings.method;
+                document.getElementById('threshold').value = settings.threshold;
+                document.getElementById('unknownThreshold').value = settings.unknown_threshold;
+                document.getElementById('thresholdValue').textContent = settings.threshold;
+                document.getElementById('unknownThresholdValue').textContent = settings.unknown_threshold;
+            }
+        })
+        .catch(error => {
+            console.error('Error loading recognition settings:', error);
+            showAlert('Lỗi tải cài đặt nhận diện', 'error');
+        });
+}
+
+// Update recognition settings
+function updateRecognitionSettings() {
+    const form = document.getElementById('recognitionSettingsForm');
+    const formData = new FormData(form);
+    
+    const settings = {
+        method: formData.get('method'),
+        threshold: parseFloat(formData.get('threshold')),
+        unknown_threshold: parseFloat(formData.get('unknown_threshold'))
+    };
+    
+    fetch('/api/recognition/settings', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(settings)
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            showAlert('Cập nhật cài đặt thành công!', 'success');
+        } else {
+            showAlert('Lỗi cập nhật cài đặt: ' + data.message, 'error');
+        }
+    })
+    .catch(error => {
+        console.error('Error updating recognition settings:', error);
+        showAlert('Lỗi cập nhật cài đặt', 'error');
+    });
+}
+
+// Initialize
+$(document).ready(function() {
+    // Update threshold display
+    $('#confidenceThreshold').on('input', function() {
+        $('#thresholdValue').text($(this).val());
+    });
+
+    // File upload handling
+    const uploadArea = document.getElementById('uploadArea');
+    const imageInput = document.getElementById('imageInput');
+
+    uploadArea.addEventListener('dragover', function(e) {
+        e.preventDefault();
+        uploadArea.classList.add('dragover');
+    });
+
+    uploadArea.addEventListener('dragleave', function(e) {
+        e.preventDefault();
+        uploadArea.classList.remove('dragover');
+    });
+
+    uploadArea.addEventListener('drop', function(e) {
+        e.preventDefault();
+        uploadArea.classList.remove('dragover');
+        const files = e.dataTransfer.files;
+        if (files.length > 0) {
+            handleImageFile(files[0]);
+        }
+    });
+
+    imageInput.addEventListener('change', function(e) {
+        if (e.target.files.length > 0) {
+            handleImageFile(e.target.files[0]);
+        }
+    });
+});
+
+function handleImageFile(file) {
+    if (validateImageFile(file)) {
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            const imageData = e.target.result;
+            showImagePreview(imageData);
+        };
+        reader.readAsDataURL(file);
+    }
+}
+
+function showImagePreview(imageData) {
+    document.getElementById('previewImg').src = imageData;
+    document.getElementById('imagePreview').style.display = 'block';
+    document.getElementById('uploadArea').style.display = 'none';
+}
+
+function recognizeImage() {
+    const imageData = document.getElementById('previewImg').src;
+    
+    showLoading('.card-body');
+    
+    $.ajax({
+        url: '/api/recognize',
+        method: 'POST',
+        contentType: 'application/json',
+        data: JSON.stringify({
+            image: imageData
+        })
+    })
+    .done(function(response) {
+        if (response.success) {
+            displayRecognitionResults(response.recognition_results);
+            addToHistory('Upload', response.recognition_results);
+        } else {
+            showAlert(`Lỗi: ${response.message}`, 'danger');
+        }
+    })
+    .fail(function() {
+        showAlert('Lỗi kết nối server', 'danger');
+    })
+    .always(function() {
+        hideLoading('.card-body');
+    });
+}
+
+function startRecognition() {
+    navigator.mediaDevices.getUserMedia({ video: true })
+        .then(function(stream) {
+            recognitionStream = stream;
+            const video = document.getElementById('recognitionVideo');
+            video.srcObject = stream;
+            video.style.display = 'block';
+            document.getElementById('videoPlaceholder').style.display = 'none';
+            
+            document.getElementById('startBtn').disabled = true;
+            document.getElementById('captureBtn').disabled = false;
+            document.getElementById('stopBtn').disabled = false;
+            
+            // Start recognition loop
+            recognitionInterval = setInterval(processFrame, 1000); // Process every second
+        })
+        .catch(function(error) {
+            console.error('Error accessing camera:', error);
+            showAlert('Không thể truy cập camera. Vui lòng kiểm tra quyền truy cập.', 'danger');
+        });
+}
+
+function stopRecognition() {
+    if (recognitionStream) {
+        recognitionStream.getTracks().forEach(track => track.stop());
+        recognitionStream = null;
+    }
+    
+    if (recognitionInterval) {
+        clearInterval(recognitionInterval);
+        recognitionInterval = null;
+    }
+    
+    document.getElementById('recognitionVideo').style.display = 'none';
+    document.getElementById('videoPlaceholder').style.display = 'block';
+    document.getElementById('recognitionResults').style.display = 'none';
+    
+    document.getElementById('startBtn').disabled = false;
+    document.getElementById('captureBtn').disabled = true;
+    document.getElementById('stopBtn').disabled = true;
+}
+
+function captureFrame() {
+    const video = document.getElementById('recognitionVideo');
+    const canvas = document.getElementById('recognitionCanvas');
+    const context = canvas.getContext('2d');
+    
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
+    context.drawImage(video, 0, 0);
+    
+    const imageData = canvas.toDataURL('image/jpeg');
+    
+    // Process captured frame
+    $.ajax({
+        url: '/api/recognize',
+        method: 'POST',
+        contentType: 'application/json',
+        data: JSON.stringify({
+            image: imageData
+        })
+    })
+    .done(function(response) {
+        if (response.success) {
+            displayRecognitionResults(response.recognition_results);
+            addToHistory('Camera', response.recognition_results);
+        }
+    })
+    .fail(function() {
+        console.error('Recognition failed');
+    });
+}
+
+function processFrame() {
+    if (!recognitionStream) return;
+    
+    const video = document.getElementById('recognitionVideo');
+    const canvas = document.getElementById('recognitionCanvas');
+    const context = canvas.getContext('2d');
+    
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
+    context.drawImage(video, 0, 0);
+    
+    const imageData = canvas.toDataURL('image/jpeg');
+    
+    // Process frame for recognition
+    $.ajax({
+        url: '/api/recognize',
+        method: 'POST',
+        contentType: 'application/json',
+        data: JSON.stringify({
+            image: imageData
+        })
+    })
+    .done(function(response) {
+        if (response.success) {
+            updateVideoOverlay(response.recognition_results);
+        }
+    })
+    .fail(function() {
+        // Silent fail for continuous recognition
+    });
+}
+
+function displayRecognitionResults(results) {
+    const resultsList = document.getElementById('resultsList');
+    resultsList.innerHTML = '';
+    
+    if (results.length === 0) {
+        resultsList.innerHTML = '<p class="text-muted">Không phát hiện được khuôn mặt</p>';
+    } else {
+        results.forEach((result, index) => {
+            const resultItem = document.createElement('div');
+            resultItem.className = 'border rounded p-3 mb-2';
+            
+            const recognition = result.recognition_result;
+            const confidence = recognition.confidence;
+            const identity = recognition.identity;
+            const isUnknown = recognition.is_unknown;
+            
+            let confidenceClass = 'text-success';
+            if (confidence < 0.5) confidenceClass = 'text-warning';
+            if (confidence < 0.3) confidenceClass = 'text-danger';
+            
+            resultItem.innerHTML = `
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h6 class="mb-1">
+                            ${isUnknown ? '<i class="fas fa-question-circle text-warning me-1"></i>' : '<i class="fas fa-user-check text-success me-1"></i>'}
+                            ${identity}
+                        </h6>
+                        <small class="text-muted">Khuôn mặt ${index + 1}</small>
+                    </div>
+                    <div class="text-end">
+                        <div class="${confidenceClass} fw-bold">${(confidence * 100).toFixed(1)}%</div>
+                        <small class="text-muted">Tin cậy</small>
+                    </div>
+                </div>
+            `;
+            
+            resultsList.appendChild(resultItem);
+        });
+    }
+    
+    document.getElementById('recognitionResults').style.display = 'block';
+}
+
+function updateVideoOverlay(results) {
+    // Update the video overlay with bounding boxes and labels
+    const video = document.getElementById('recognitionVideo');
+    const canvas = document.getElementById('recognitionCanvas');
+    const context = canvas.getContext('2d');
+    
+    // Set canvas size to match video
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
+    
+    // Clear canvas
+    context.clearRect(0, 0, canvas.width, canvas.height);
+    
+    // Draw video frame
+    context.drawImage(video, 0, 0);
+    
+    // Draw bounding boxes and labels for each detected face
+    results.forEach((result, index) => {
+        const bbox = result.bbox;
+        const recognition = result.recognition_result;
+        const identity = recognition.identity;
+        const confidence = recognition.confidence;
+        const isUnknown = recognition.is_unknown;
+        
+        // Calculate bounding box coordinates
+        const x = bbox.x;
+        const y = bbox.y;
+        const width = bbox.width;
+        const height = bbox.height;
+        
+        // Choose color based on recognition result
+        const color = isUnknown ? '#ff4444' : '#44ff44';
+        
+        // Draw bounding box
+        context.strokeStyle = color;
+        context.lineWidth = 3;
+        context.strokeRect(x, y, width, height);
+        
+        // Draw label background
+        const labelText = `${identity} (${(confidence * 100).toFixed(1)}%)`;
+        const textMetrics = context.measureText(labelText);
+        const labelWidth = textMetrics.width + 10;
+        const labelHeight = 25;
+        
+        context.fillStyle = color;
+        context.fillRect(x, y - labelHeight, labelWidth, labelHeight);
+        
+        // Draw label text
+        context.fillStyle = 'white';
+        context.font = '14px Arial';
+        context.fillText(labelText, x + 5, y - 8);
+    });
+    
+    // Show canvas over video
+    canvas.style.display = 'block';
+    canvas.style.position = 'absolute';
+    canvas.style.top = '0';
+    canvas.style.left = '0';
+    canvas.style.pointerEvents = 'none';
+    
+    // Log results for debugging
+    console.log('Recognition results:', results);
+}
+
+function addToHistory(method, results) {
+    const timestamp = new Date().toLocaleString('vi-VN');
+    const historyItem = {
+        timestamp: timestamp,
+        method: method,
+        results: results
+    };
+    
+    recognitionHistory.unshift(historyItem);
+    
+    // Keep only last 10 items
+    if (recognitionHistory.length > 10) {
+        recognitionHistory = recognitionHistory.slice(0, 10);
+    }
+    
+    updateHistoryDisplay();
+}
+
+function updateHistoryDisplay() {
+    const historyDiv = document.getElementById('recognitionHistory');
+    
+    if (recognitionHistory.length === 0) {
+        historyDiv.innerHTML = '<p class="text-muted text-center">Chưa có lịch sử nhận diện</p>';
+        return;
+    }
+    
+    let historyHtml = '';
+    recognitionHistory.forEach((item, index) => {
+        const resultCount = item.results.length;
+        const recognizedCount = item.results.filter(r => !r.recognition_result.is_unknown).length;
+        
+        historyHtml += `
+            <div class="d-flex justify-content-between align-items-center border-bottom py-2">
+                <div>
+                    <div class="fw-bold">${item.timestamp}</div>
+                    <small class="text-muted">${item.method} - ${recognizedCount}/${resultCount} khuôn mặt được nhận diện</small>
+                </div>
+                <button class="btn btn-sm btn-outline-primary" onclick="viewHistoryDetails(${index})">
+                    <i class="fas fa-eye"></i>
+                </button>
+            </div>
+        `;
+    });
+    
+    historyDiv.innerHTML = historyHtml;
+}
+
+function viewHistoryDetails(index) {
+    const item = recognitionHistory[index];
+    let detailsHtml = `
+        <div class="modal fade" id="historyModal" tabindex="-1">
+            <div class="modal-dialog modal-lg">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title">Chi tiết nhận diện - ${item.timestamp}</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body">
+                        <p><strong>Phương thức:</strong> ${item.method}</p>
+                        <h6>Kết quả:</h6>
+    `;
+    
+    item.results.forEach((result, i) => {
+        const recognition = result.recognition_result;
+        detailsHtml += `
+            <div class="border rounded p-3 mb-2">
+                <h6>Khuôn mặt ${i + 1}</h6>
+                <p><strong>Danh tính:</strong> ${recognition.identity}</p>
+                <p><strong>Độ tin cậy:</strong> ${(recognition.confidence * 100).toFixed(1)}%</p>
+                <p><strong>Phương pháp:</strong> ${recognition.method}</p>
+            </div>
+        `;
+    });
+    
+    detailsHtml += `
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Đóng</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    // Remove existing modal if any
+    $('#historyModal').remove();
+    
+    // Add new modal
+    $('body').append(detailsHtml);
+    $('#historyModal').modal('show');
+}
+</script>
+{% endblock %}

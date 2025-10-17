@@ -1,0 +1,382 @@
+{% extends "base.html" %}
+
+{% block title %}Trang chủ - Hệ thống Nhận diện Khuôn mặt{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <!-- Hero Section -->
+    <div class="row mb-5">
+        <div class="col-12 text-center">
+            <h1 class="display-4 mb-3">
+                <i class="fas fa-user-check text-primary"></i>
+                Hệ thống Nhận diện Khuôn mặt
+            </h1>
+            <p class="lead text-muted">
+                Sử dụng FaceNet và AI để nhận diện khuôn mặt trong thời gian thực
+            </p>
+        </div>
+    </div>
+
+    <!-- Features Section -->
+    <div class="row mb-5">
+        <div class="col-md-4 mb-4">
+            <div class="card h-100 text-center">
+                <div class="card-body">
+                    <div class="feature-icon">
+                        <i class="fas fa-user-plus"></i>
+                    </div>
+                    <h5 class="card-title">Đăng ký Người dùng</h5>
+                    <p class="card-text">
+                        Dễ dàng thêm người dùng mới vào hệ thống chỉ bằng một vài tấm ảnh thông thường.
+                        Hệ thống tự động phát hiện và trích xuất khuôn mặt.
+                    </p>
+                    <a href="{{ url_for('enrollment') }}" class="btn btn-primary">
+                        <i class="fas fa-arrow-right me-1"></i>Bắt đầu đăng ký
+                    </a>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-4 mb-4">
+            <div class="card h-100 text-center">
+                <div class="card-body">
+                    <div class="feature-icon">
+                        <i class="fas fa-search"></i>
+                    </div>
+                    <h5 class="card-title">Nhận diện Thời gian thực</h5>
+                    <p class="card-text">
+                        Nhận diện và hiển thị tên của nhiều người trong luồng video trực tiếp từ camera
+                        với tốc độ cao và độ chính xác cao.
+                    </p>
+                    <a href="{{ url_for('recognition') }}" class="btn btn-success">
+                        <i class="fas fa-arrow-right me-1"></i>Bắt đầu nhận diện
+                    </a>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-4 mb-4">
+            <div class="card h-100 text-center">
+                <div class="card-body">
+                    <div class="feature-icon">
+                        <i class="fas fa-database"></i>
+                    </div>
+                    <h5 class="card-title">Quản lý Database</h5>
+                    <p class="card-text">
+                        Xem, quản lý và xuất dữ liệu người dùng. Backup và restore database
+                        một cách dễ dàng.
+                    </p>
+                    <a href="{{ url_for('database_view') }}" class="btn btn-info">
+                        <i class="fas fa-arrow-right me-1"></i>Quản lý database
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Statistics Section -->
+    <div class="row mb-5">
+        <div class="col-12">
+            <h3 class="text-center mb-4">Thống kê Hệ thống</h3>
+        </div>
+        <div class="col-md-3 mb-3">
+            <div class="card stats-card">
+                <div class="card-body text-center">
+                    <i class="fas fa-users fa-2x mb-2"></i>
+                    <div class="stats-number" id="person-count">-</div>
+                    <div>Người đã đăng ký</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3 mb-3">
+            <div class="card stats-card">
+                <div class="card-body text-center">
+                    <i class="fas fa-fingerprint fa-2x mb-2"></i>
+                    <div class="stats-number" id="embedding-count">-</div>
+                    <div>Embeddings</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3 mb-3">
+            <div class="card stats-card">
+                <div class="card-body text-center">
+                    <i class="fas fa-clock fa-2x mb-2"></i>
+                    <div class="stats-number" id="latest-update">-</div>
+                    <div>Cập nhật gần nhất</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3 mb-3">
+            <div class="card stats-card">
+                <div class="card-body text-center">
+                    <i class="fas fa-hdd fa-2x mb-2"></i>
+                    <div class="stats-number" id="db-size">-</div>
+                    <div>Kích thước DB (MB)</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Quick Actions -->
+    <div class="row mb-5">
+        <div class="col-12">
+            <h3 class="text-center mb-4">Thao tác Nhanh</h3>
+        </div>
+        <div class="col-md-6 mb-3">
+            <div class="card">
+                <div class="card-body">
+                    <h5 class="card-title">
+                        <i class="fas fa-camera text-primary me-2"></i>
+                        Chụp ảnh và Đăng ký
+                    </h5>
+                    <p class="card-text">Sử dụng webcam để chụp ảnh và đăng ký người dùng mới ngay lập tức.</p>
+                    <button class="btn btn-primary" onclick="quickEnrollment()">
+                        <i class="fas fa-camera me-1"></i>Chụp ảnh
+                    </button>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6 mb-3">
+            <div class="card">
+                <div class="card-body">
+                    <h5 class="card-title">
+                        <i class="fas fa-video text-success me-2"></i>
+                        Nhận diện Thời gian thực
+                    </h5>
+                    <p class="card-text">Bắt đầu nhận diện khuôn mặt trong thời gian thực từ webcam.</p>
+                    <button class="btn btn-success" onclick="quickRecognition()">
+                        <i class="fas fa-video me-1"></i>Bắt đầu
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Technology Stack -->
+    <div class="row mb-5">
+        <div class="col-12">
+            <h3 class="text-center mb-4">Công nghệ Sử dụng</h3>
+        </div>
+        <div class="col-md-3 mb-3 text-center">
+            <div class="card h-100">
+                <div class="card-body">
+                    <i class="fab fa-python fa-3x text-primary mb-3"></i>
+                    <h6>Python & Flask</h6>
+                    <small class="text-muted">Backend Framework</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3 mb-3 text-center">
+            <div class="card h-100">
+                <div class="card-body">
+                    <i class="fas fa-brain fa-3x text-success mb-3"></i>
+                    <h6>FaceNet</h6>
+                    <small class="text-muted">Deep Learning Model</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3 mb-3 text-center">
+            <div class="card h-100">
+                <div class="card-body">
+                    <i class="fas fa-eye fa-3x text-info mb-3"></i>
+                    <h6>Mediapipe</h6>
+                    <small class="text-muted">Face Detection</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3 mb-3 text-center">
+            <div class="card h-100">
+                <div class="card-body">
+                    <i class="fas fa-database fa-3x text-warning mb-3"></i>
+                    <h6>SQLite</h6>
+                    <small class="text-muted">Database</small>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Quick Enrollment Modal -->
+<div class="modal fade" id="quickEnrollmentModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    <i class="fas fa-camera me-2"></i>Chụp ảnh và Đăng ký
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="mb-3">
+                            <label for="quickName" class="form-label">Tên người dùng</label>
+                            <input type="text" class="form-control" id="quickName" placeholder="Nhập tên">
+                        </div>
+                        <div class="video-container">
+                            <video id="quickVideo" width="100%" height="300" autoplay></video>
+                            <canvas id="quickCanvas" style="display: none;"></canvas>
+                        </div>
+                        <div class="mt-3">
+                            <button class="btn btn-primary" onclick="captureQuickPhoto()">
+                                <i class="fas fa-camera me-1"></i>Chụp ảnh
+                            </button>
+                            <button class="btn btn-secondary" onclick="stopQuickCamera()">
+                                <i class="fas fa-stop me-1"></i>Dừng camera
+                            </button>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="mb-3">
+                            <label class="form-label">Ảnh đã chụp</label>
+                            <div id="quickPreview" class="border rounded p-3 text-center" style="min-height: 200px;">
+                                <p class="text-muted">Chưa có ảnh</p>
+                            </div>
+                        </div>
+                        <div class="loading">
+                            <div class="spinner-border text-primary" role="status">
+                                <span class="visually-hidden">Đang xử lý...</span>
+                            </div>
+                            <p class="mt-2">Đang xử lý ảnh...</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Đóng</button>
+                <button type="button" class="btn btn-primary" onclick="submitQuickEnrollment()">
+                    <i class="fas fa-save me-1"></i>Đăng ký
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+let quickStream = null;
+let quickCapturedImage = null;
+
+// Load statistics on page load
+$(document).ready(function() {
+    loadStatistics();
+});
+
+function loadStatistics() {
+    $.get('/api/database/stats')
+        .done(function(response) {
+            if (response.success) {
+                const stats = response.stats;
+                $('#person-count').text(stats.person_count || 0);
+                $('#embedding-count').text(stats.embedding_count || 0);
+                $('#db-size').text(stats.database_size_mb ? stats.database_size_mb.toFixed(2) : '0.00');
+                
+                if (stats.latest_created_at) {
+                    const date = new Date(stats.latest_created_at);
+                    $('#latest-update').text(date.toLocaleDateString('vi-VN'));
+                } else {
+                    $('#latest-update').text('Chưa có');
+                }
+            }
+        })
+        .fail(function() {
+            console.error('Failed to load statistics');
+        });
+}
+
+function quickEnrollment() {
+    $('#quickEnrollmentModal').modal('show');
+    startQuickCamera();
+}
+
+function quickRecognition() {
+    window.location.href = "{{ url_for('recognition') }}";
+}
+
+function startQuickCamera() {
+    navigator.mediaDevices.getUserMedia({ video: true })
+        .then(function(stream) {
+            quickStream = stream;
+            const video = document.getElementById('quickVideo');
+            video.srcObject = stream;
+        })
+        .catch(function(error) {
+            console.error('Error accessing camera:', error);
+            showAlert('Không thể truy cập camera. Vui lòng kiểm tra quyền truy cập.', 'danger');
+        });
+}
+
+function stopQuickCamera() {
+    if (quickStream) {
+        quickStream.getTracks().forEach(track => track.stop());
+        quickStream = null;
+    }
+}
+
+function captureQuickPhoto() {
+    const video = document.getElementById('quickVideo');
+    const canvas = document.getElementById('quickCanvas');
+    const context = canvas.getContext('2d');
+    
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
+    context.drawImage(video, 0, 0);
+    
+    // Convert to base64
+    quickCapturedImage = canvas.toDataURL('image/jpeg');
+    
+    // Show preview
+    $('#quickPreview').html(`<img src="${quickCapturedImage}" class="img-fluid rounded" alt="Captured photo">`);
+}
+
+function submitQuickEnrollment() {
+    const name = $('#quickName').val().trim();
+    
+    if (!name) {
+        showAlert('Vui lòng nhập tên người dùng', 'danger');
+        return;
+    }
+    
+    if (!quickCapturedImage) {
+        showAlert('Vui lòng chụp ảnh trước', 'danger');
+        return;
+    }
+    
+    showLoading('#quickEnrollmentModal .modal-body');
+    
+    $.ajax({
+        url: '/api/enroll',
+        method: 'POST',
+        contentType: 'application/json',
+        data: JSON.stringify({
+            name: name,
+            image: quickCapturedImage
+        })
+    })
+    .done(function(response) {
+        if (response.success) {
+            showAlert(`Đăng ký thành công: ${response.message}`, 'success');
+            $('#quickEnrollmentModal').modal('hide');
+            loadStatistics(); // Reload stats
+        } else {
+            showAlert(`Lỗi: ${response.message}`, 'danger');
+        }
+    })
+    .fail(function() {
+        showAlert('Lỗi kết nối server', 'danger');
+    })
+    .always(function() {
+        hideLoading('#quickEnrollmentModal .modal-body');
+    });
+}
+
+// Clean up camera when modal is closed
+$('#quickEnrollmentModal').on('hidden.bs.modal', function() {
+    stopQuickCamera();
+    quickCapturedImage = null;
+    $('#quickName').val('');
+    $('#quickPreview').html('<p class="text-muted">Chưa có ảnh</p>');
+});
+</script>
+{% endblock %}

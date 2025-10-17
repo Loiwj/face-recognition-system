@@ -1,0 +1,425 @@
+{% extends "base.html" %}
+
+{% block title %}Đăng ký Người dùng - Hệ thống Nhận diện Khuôn mặt{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row">
+        <div class="col-12">
+            <h2 class="mb-4">
+                <i class="fas fa-user-plus text-primary me-2"></i>
+                Đăng ký Người dùng Mới
+            </h2>
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- Upload Section -->
+        <div class="col-md-6 mb-4">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="fas fa-upload me-2"></i>
+                        Upload Ảnh
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <!-- File Upload -->
+                    <div class="upload-area" id="uploadArea">
+                        <i class="fas fa-cloud-upload-alt fa-3x text-muted mb-3"></i>
+                        <h5>Kéo thả ảnh vào đây</h5>
+                        <p class="text-muted">hoặc</p>
+                        <input type="file" id="fileInput" class="d-none" accept="image/*" multiple>
+                        <button class="btn btn-primary" onclick="$('#fileInput').click()">
+                            <i class="fas fa-folder-open me-1"></i>Chọn ảnh
+                        </button>
+                        <p class="text-muted mt-2">
+                            Hỗ trợ: JPG, PNG, GIF, BMP<br>
+                            Kích thước tối đa: 16MB
+                        </p>
+                    </div>
+
+                    <!-- Selected Files -->
+                    <div id="selectedFiles" class="mt-3" style="display: none;">
+                        <h6>Ảnh đã chọn:</h6>
+                        <div id="fileList"></div>
+                    </div>
+
+                    <!-- Person Name Input -->
+                    <div class="mt-4">
+                        <label for="personName" class="form-label">Tên người dùng</label>
+                        <input type="text" class="form-control" id="personName" 
+                               placeholder="Nhập tên người dùng" required>
+                    </div>
+
+                    <!-- Submit Button -->
+                    <div class="mt-4">
+                        <button class="btn btn-success w-100" onclick="submitEnrollment()" id="submitBtn">
+                            <i class="fas fa-save me-1"></i>Đăng ký
+                        </button>
+                    </div>
+
+                    <!-- Loading -->
+                    <div class="loading text-center mt-3">
+                        <div class="spinner-border text-primary" role="status">
+                            <span class="visually-hidden">Đang xử lý...</span>
+                        </div>
+                        <p class="mt-2">Đang xử lý ảnh và đăng ký...</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Camera Section -->
+        <div class="col-md-6 mb-4">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="fas fa-camera me-2"></i>
+                        Chụp ảnh trực tiếp
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <!-- Camera -->
+                    <div class="video-container mb-3">
+                        <video id="cameraVideo" width="100%" height="300" autoplay style="display: none;"></video>
+                        <canvas id="cameraCanvas" style="display: none;"></canvas>
+                        <div id="cameraPlaceholder" class="text-center p-5 border rounded">
+                            <i class="fas fa-camera fa-3x text-muted mb-3"></i>
+                            <p class="text-muted">Nhấn "Bắt đầu Camera" để chụp ảnh</p>
+                        </div>
+                    </div>
+
+                    <!-- Camera Controls -->
+                    <div class="mb-3">
+                        <button class="btn btn-primary me-2" onclick="startCamera()" id="startCameraBtn">
+                            <i class="fas fa-play me-1"></i>Bắt đầu Camera
+                        </button>
+                        <button class="btn btn-secondary me-2" onclick="capturePhoto()" id="captureBtn" disabled>
+                            <i class="fas fa-camera me-1"></i>Chụp ảnh
+                        </button>
+                        <button class="btn btn-danger" onclick="stopCamera()" id="stopCameraBtn" disabled>
+                            <i class="fas fa-stop me-1"></i>Dừng Camera
+                        </button>
+                    </div>
+
+                    <!-- Captured Photos -->
+                    <div id="capturedPhotos" style="display: none;">
+                        <h6>Ảnh đã chụp:</h6>
+                        <div id="photoList" class="row"></div>
+                    </div>
+
+                    <!-- Camera Person Name -->
+                    <div class="mt-3">
+                        <label for="cameraPersonName" class="form-label">Tên người dùng</label>
+                        <input type="text" class="form-control" id="cameraPersonName" 
+                               placeholder="Nhập tên người dùng">
+                    </div>
+
+                    <!-- Camera Submit -->
+                    <div class="mt-3">
+                        <button class="btn btn-success w-100" onclick="submitCameraEnrollment()" id="cameraSubmitBtn" disabled>
+                            <i class="fas fa-save me-1"></i>Đăng ký từ Camera
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Instructions -->
+    <div class="row mt-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="fas fa-info-circle me-2"></i>
+                        Hướng dẫn Đăng ký
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <h6><i class="fas fa-upload text-primary me-2"></i>Upload Ảnh:</h6>
+                            <ul>
+                                <li>Chọn ảnh có khuôn mặt rõ ràng</li>
+                                <li>Có thể upload nhiều ảnh cùng lúc</li>
+                                <li>Ảnh có thể chứa nhiều người, hệ thống sẽ cho phép chọn</li>
+                                <li>Định dạng: JPG, PNG, GIF, BMP</li>
+                            </ul>
+                        </div>
+                        <div class="col-md-6">
+                            <h6><i class="fas fa-camera text-success me-2"></i>Chụp ảnh:</h6>
+                            <ul>
+                                <li>Đảm bảo ánh sáng đủ</li>
+                                <li>Nhìn thẳng vào camera</li>
+                                <li>Giữ khoảng cách phù hợp</li>
+                                <li>Có thể chụp nhiều ảnh để tăng độ chính xác</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+let cameraStream = null;
+let capturedPhotos = [];
+let selectedFiles = [];
+
+// File upload handling
+$(document).ready(function() {
+    // Drag and drop
+    const uploadArea = document.getElementById('uploadArea');
+    const fileInput = document.getElementById('fileInput');
+
+    uploadArea.addEventListener('dragover', function(e) {
+        e.preventDefault();
+        uploadArea.classList.add('dragover');
+    });
+
+    uploadArea.addEventListener('dragleave', function(e) {
+        e.preventDefault();
+        uploadArea.classList.remove('dragover');
+    });
+
+    uploadArea.addEventListener('drop', function(e) {
+        e.preventDefault();
+        uploadArea.classList.remove('dragover');
+        const files = e.dataTransfer.files;
+        handleFiles(files);
+    });
+
+    fileInput.addEventListener('change', function(e) {
+        handleFiles(e.target.files);
+    });
+});
+
+function handleFiles(files) {
+    selectedFiles = [];
+    const fileList = document.getElementById('fileList');
+    fileList.innerHTML = '';
+
+    for (let file of files) {
+        if (validateImageFile(file)) {
+            selectedFiles.push(file);
+            
+            const fileItem = document.createElement('div');
+            fileItem.className = 'd-flex align-items-center mb-2 p-2 border rounded';
+            fileItem.innerHTML = `
+                <img src="${URL.createObjectURL(file)}" class="me-3" style="width: 50px; height: 50px; object-fit: cover; border-radius: 5px;">
+                <div class="flex-grow-1">
+                    <div class="fw-bold">${file.name}</div>
+                    <small class="text-muted">${formatFileSize(file.size)}</small>
+                </div>
+                <button class="btn btn-sm btn-outline-danger" onclick="removeFile('${file.name}')">
+                    <i class="fas fa-times"></i>
+                </button>
+            `;
+            fileList.appendChild(fileItem);
+        }
+    }
+
+    if (selectedFiles.length > 0) {
+        document.getElementById('selectedFiles').style.display = 'block';
+    } else {
+        document.getElementById('selectedFiles').style.display = 'none';
+    }
+}
+
+function removeFile(fileName) {
+    selectedFiles = selectedFiles.filter(file => file.name !== fileName);
+    handleFiles(selectedFiles);
+}
+
+function submitEnrollment() {
+    const name = document.getElementById('personName').value.trim();
+    
+    if (!name) {
+        showAlert('Vui lòng nhập tên người dùng', 'danger');
+        return;
+    }
+    
+    if (selectedFiles.length === 0) {
+        showAlert('Vui lòng chọn ít nhất một ảnh', 'danger');
+        return;
+    }
+
+    showLoading('.card-body');
+    
+    const formData = new FormData();
+    formData.append('name', name);
+    
+    selectedFiles.forEach(file => {
+        formData.append('file', file);
+    });
+
+    $.ajax({
+        url: '/api/upload',
+        method: 'POST',
+        data: formData,
+        processData: false,
+        contentType: false
+    })
+    .done(function(response) {
+        if (response.success) {
+            showAlert(`Đăng ký thành công: ${response.message}`, 'success');
+            // Reset form
+            document.getElementById('personName').value = '';
+            selectedFiles = [];
+            document.getElementById('selectedFiles').style.display = 'none';
+            document.getElementById('fileInput').value = '';
+        } else {
+            showAlert(`Lỗi: ${response.message}`, 'danger');
+        }
+    })
+    .fail(function() {
+        showAlert('Lỗi kết nối server', 'danger');
+    })
+    .always(function() {
+        hideLoading('.card-body');
+    });
+}
+
+// Camera functions
+function startCamera() {
+    navigator.mediaDevices.getUserMedia({ video: true })
+        .then(function(stream) {
+            cameraStream = stream;
+            const video = document.getElementById('cameraVideo');
+            video.srcObject = stream;
+            video.style.display = 'block';
+            document.getElementById('cameraPlaceholder').style.display = 'none';
+            
+            document.getElementById('startCameraBtn').disabled = true;
+            document.getElementById('captureBtn').disabled = false;
+            document.getElementById('stopCameraBtn').disabled = false;
+        })
+        .catch(function(error) {
+            console.error('Error accessing camera:', error);
+            showAlert('Không thể truy cập camera. Vui lòng kiểm tra quyền truy cập.', 'danger');
+        });
+}
+
+function stopCamera() {
+    if (cameraStream) {
+        cameraStream.getTracks().forEach(track => track.stop());
+        cameraStream = null;
+    }
+    
+    document.getElementById('cameraVideo').style.display = 'none';
+    document.getElementById('cameraPlaceholder').style.display = 'block';
+    
+    document.getElementById('startCameraBtn').disabled = false;
+    document.getElementById('captureBtn').disabled = true;
+    document.getElementById('stopCameraBtn').disabled = true;
+}
+
+function capturePhoto() {
+    const video = document.getElementById('cameraVideo');
+    const canvas = document.getElementById('cameraCanvas');
+    const context = canvas.getContext('2d');
+    
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
+    context.drawImage(video, 0, 0);
+    
+    const photoData = canvas.toDataURL('image/jpeg');
+    capturedPhotos.push(photoData);
+    
+    updatePhotoList();
+    updateCameraSubmitButton();
+}
+
+function updatePhotoList() {
+    const photoList = document.getElementById('photoList');
+    photoList.innerHTML = '';
+    
+    capturedPhotos.forEach((photo, index) => {
+        const col = document.createElement('div');
+        col.className = 'col-md-4 mb-2';
+        col.innerHTML = `
+            <div class="position-relative">
+                <img src="${photo}" class="img-fluid rounded" alt="Captured photo">
+                <button class="btn btn-sm btn-danger position-absolute top-0 end-0 m-1" 
+                        onclick="removePhoto(${index})">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+        `;
+        photoList.appendChild(col);
+    });
+    
+    if (capturedPhotos.length > 0) {
+        document.getElementById('capturedPhotos').style.display = 'block';
+    } else {
+        document.getElementById('capturedPhotos').style.display = 'none';
+    }
+}
+
+function removePhoto(index) {
+    capturedPhotos.splice(index, 1);
+    updatePhotoList();
+    updateCameraSubmitButton();
+}
+
+function updateCameraSubmitButton() {
+    const name = document.getElementById('cameraPersonName').value.trim();
+    const hasPhotos = capturedPhotos.length > 0;
+    
+    document.getElementById('cameraSubmitBtn').disabled = !(name && hasPhotos);
+}
+
+function submitCameraEnrollment() {
+    const name = document.getElementById('cameraPersonName').value.trim();
+    
+    if (!name) {
+        showAlert('Vui lòng nhập tên người dùng', 'danger');
+        return;
+    }
+    
+    if (capturedPhotos.length === 0) {
+        showAlert('Vui lòng chụp ít nhất một ảnh', 'danger');
+        return;
+    }
+
+    showLoading('.card-body');
+    
+    // Submit first photo (can be extended to submit multiple)
+    $.ajax({
+        url: '/api/enroll',
+        method: 'POST',
+        contentType: 'application/json',
+        data: JSON.stringify({
+            name: name,
+            image: capturedPhotos[0]
+        })
+    })
+    .done(function(response) {
+        if (response.success) {
+            showAlert(`Đăng ký thành công: ${response.message}`, 'success');
+            // Reset camera form
+            document.getElementById('cameraPersonName').value = '';
+            capturedPhotos = [];
+            updatePhotoList();
+            updateCameraSubmitButton();
+        } else {
+            showAlert(`Lỗi: ${response.message}`, 'danger');
+        }
+    })
+    .fail(function() {
+        showAlert('Lỗi kết nối server', 'danger');
+    })
+    .always(function() {
+        hideLoading('.card-body');
+    });
+}
+
+// Update camera submit button when name changes
+document.getElementById('cameraPersonName').addEventListener('input', updateCameraSubmitButton);
+</script>
+{% endblock %}

@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+
+{% block title %}404 - Không tìm thấy trang{% endblock %}
+
+{% block content %}
+<div class="container mt-5">
+    <div class="row justify-content-center">
+        <div class="col-md-6 text-center">
+            <div class="error-template">
+                <h1 class="display-1 text-primary">404</h1>
+                <h2>Trang không tìm thấy</h2>
+                <div class="error-details">
+                    <p class="text-muted">Xin lỗi, trang bạn đang tìm kiếm không tồn tại.</p>
+                </div>
+                <div class="error-actions">
+                    <a href="{{ url_for('index') }}" class="btn btn-primary btn-lg">
+                        <i class="fas fa-home me-2"></i>Về trang chủ
+                    </a>
+                    <a href="javascript:history.back()" class="btn btn-outline-secondary btn-lg ms-2">
+                        <i class="fas fa-arrow-left me-2"></i>Quay lại
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
